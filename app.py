@@ -1,14 +1,9 @@
 # app.py
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 import re
 from sympy import symbols, sympify, factor, diff, integrate
-import warnings
-
-# 경고 무시
-warnings.filterwarnings("ignore", category=UserWarning)
-warnings.filterwarnings("ignore", category=RuntimeWarning)
+import plotly.graph_objs as go
 
 # --- 함수 전처리 ---
 def preprocess_func(func_str):
@@ -62,20 +57,18 @@ except Exception as e:
     st.error(f"그래프 계산 오류: {e}")
     st.stop()
 
-# --- 그래프 그리기 ---
-fig, ax = plt.subplots(figsize=(10,6))
-ax.plot(x_vals, y_orig, label=f'원 함수: {func_input}', color='blue')
-ax.plot(x_vals, y_fact, label=f'인수분해: {factored_expr}', color='green', linestyle='--')
-ax.plot(x_vals, y_diff, label=f'미분: {diff_expr}', color='red', linestyle='-.')
-ax.plot(x_vals, y_int, label=f'적분: {int_expr} + C', color='purple', linestyle=':')
+# --- Plotly 그래프 ---
+fig = go.Figure()
+fig.add_trace(go.Scatter(x=x_vals, y=y_orig, mode='lines', name=f'원 함수: {func_input}'))
+fig.add_trace(go.Scatter(x=x_vals, y=y_fact, mode='lines', name=f'인수분해: {factored_expr}', line=dict(dash='dash')))
+fig.add_trace(go.Scatter(x=x_vals, y=y_diff, mode='lines', name=f'미분: {diff_expr}', line=dict(dash='dot')))
+fig.add_trace(go.Scatter(x=x_vals, y=y_int, mode='lines', name=f'적분: {int_expr} + C', line=dict(dash='dashdot')))
 
-ax.set_title('함수 그래프 및 인수분해/미분/적분', fontsize=14)
-ax.set_xlabel('x', fontsize=12)
-ax.set_ylabel('y', fontsize=12)
-ax.grid(True)
-ax.legend(fontsize=10)
+fig.update_layout(title='함수 그래프 및 인수분해/미분/적분',
+                  xaxis_title='x', yaxis_title='y',
+                  legend=dict(font=dict(size=10)))
 
-st.pyplot(fig)
+# Streamlit에서 Plotly 표시 (클릭 좌표 지원)
+st.plotly_chart(fig, use_container_width=True)
 
-# Streamlit에는 클릭 좌표 기능이 따로 없어서 대체
-st.info("※ 그래프 클릭 좌표 기능은 Streamlit에서는 지원되지 않습니다. 필요한 경우 Plotly 사용 가능")
+st.info("그래프 위 포인트 클릭 시 좌표를 확인할 수 있습니다.")
