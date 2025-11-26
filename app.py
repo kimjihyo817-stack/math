@@ -2,7 +2,7 @@
 import streamlit as st
 import numpy as np
 import re
-from sympy import symbols, sympify, factor, diff, integrate
+from sympy import symbols, sympify, factor, diff, integrate, lambdify
 import plotly.graph_objs as go
 
 # --- 함수 전처리 ---
@@ -17,16 +17,16 @@ st.title("함수 분석 그래프")
 st.write("함수를 입력하면 원 함수, 인수분해, 미분, 적분 그래프를 보여줍니다.")
 
 # 함수 입력
-func_input = st.text_input("함수 입력 (예: x^2 + 5x + 6)", "x^2 + 2*x + 1")
+func_input = st.text_input("함수 입력 (예: x^2 + 5*x + 6)", "x^2 + 2*x + 1")
 func_processed = preprocess_func(func_input)
 
 # SymPy 설정
-x_sym = symbols('x')
+x = symbols('x')
 try:
     expr = sympify(func_processed)
     factored_expr = factor(expr)
-    diff_expr = diff(expr, x_sym)
-    int_expr = integrate(expr, x_sym)
+    diff_expr = diff(expr, x)
+    int_expr = integrate(expr, x)
 except Exception as e:
     st.error(f"함수 처리 오류: {e}")
     st.stop()
@@ -39,20 +39,17 @@ st.write(f"적분: {int_expr} + C")
 # x 범위
 x_vals = np.linspace(-10, 10, 400)
 
-# 안전한 eval 환경
-allowed_funcs = {
-    'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
-    'exp': np.exp, 'log': np.log, 'sqrt': np.sqrt, 'abs': np.abs
-}
-safe_dict = allowed_funcs.copy()
-safe_dict['x'] = x_vals
-
-# y 값 계산
+# SymPy 함수 → NumPy 함수 변환
 try:
-    y_orig = eval(func_processed, {"__builtins__": None}, safe_dict)
-    y_fact = np.array([float(factored_expr.subs(x_sym, val)) for val in x_vals])
-    y_diff = np.array([float(diff_expr.subs(x_sym, val)) for val in x_vals])
-    y_int = np.array([float(int_expr.subs(x_sym, val)) for val in x_vals])
+    f_orig = lambdify(x, expr, "numpy")
+    f_fact = lambdify(x, factored_expr, "numpy")
+    f_diff = lambdify(x, diff_expr, "numpy")
+    f_int = lambdify(x, int_expr, "numpy")
+
+    y_orig = f_orig(x_vals)
+    y_fact = f_fact(x_vals)
+    y_diff = f_diff(x_vals)
+    y_int = f_int(x_vals)
 except Exception as e:
     st.error(f"그래프 계산 오류: {e}")
     st.stop()
@@ -68,7 +65,5 @@ fig.update_layout(title='함수 그래프 및 인수분해/미분/적분',
                   xaxis_title='x', yaxis_title='y',
                   legend=dict(font=dict(size=10)))
 
-# Streamlit에서 Plotly 표시 (클릭 좌표 지원)
 st.plotly_chart(fig, use_container_width=True)
-
-st.info("그래프 위 포인트 클릭 시 좌표를 확인할 수 있습니다.")
+st.info("그래프 위 포인트 클릭 시 좌표 확인 가능")
